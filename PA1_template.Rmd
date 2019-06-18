@@ -1,25 +1,86 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+output: html_document
+keep_md: true
 ---
-
-
+```{r global_options,echo=FALSE}
+knitr::opts_chunk$set(message = FALSE,warning = FALSE)
+```
 ## Loading and preprocessing the data
 
-
+Read data and summarise:
+```{r datasection, cache=T}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip",
+              "C:/Users/dKd/Documents/R files/Coursera/Course 5 - Reproducible Research/activity.zip")
+unzip("C:/Users/dKd/Documents/R files/Coursera/Course 5 - Reproducible Research/activity.zip")
+data <- read.csv("C:/Users/dKd/Documents/R files/Coursera/Course 5 - Reproducible Research/activity.csv")
+summary(data)
+# No further preprocessing necessary at this point
+```
 
 ## What is mean total number of steps taken per day?
+The following histogram shows how often a particular total number of steps per day was taken:
+```{r stepsperday}
+library(dplyr)
+hd <- data %>% 
+  group_by(date) %>%
+  summarise(sum = sum(steps,na.rm=T))
+hist(hd$sum,breaks=20,main='Histogram of steps per day',xlab='Total number of steps per day')
+```
 
-
+The mean and median total number of steps per day are
+```{r echo=FALSE}
+cat("mean =",mean(hd$sum,na.rm=T))
+cat("\nmedian =",median(hd$sum,na.rm=T))
+```
 
 ## What is the average daily activity pattern?
+```{r dailypattern}
+hd2 <- data %>% 
+  group_by(interval) %>%
+  summarise(mean = mean(steps,na.rm=T))
+plot(hd2$mean,type="l",main='Average daily pattern of steps',xlab='5-minute interval',ylab='number of steps')
+```
+```{r maxinterval}
+library(nnet)
+row <- which.is.max(hd2$mean)
+maxsteps <- formatC(hd2$mean[row],format="f",digits=2)
+maxint <- hd2$interval[row]
+tim5min <- paste0(substr(maxint,1,nchar(maxint)-2),":",substring(maxint,nchar(maxint)-1)," hrs")
+
+```
+Maximum average number of steps is `r maxsteps` at the `r row`-th 5-minute interval ending at `r tim5min`.
 
 
+## Imputing missing values  erewre   
+There are `r sum(is.na(data))` missing data values in the dataset
+```{r impute}
+# if #steps is missing, impute average value of corresponding interval (from hd2)
+data_imp <- left_join(data,hd2,by="interval") %>% mutate(steps=ifelse(is.na(steps),mean,steps)) %>% select(-mean)
+hd_imp <- data_imp %>% 
+  group_by(date) %>%
+  summarise(sum = sum(steps,na.rm=T))
+hist(hd_imp$sum,breaks=20,main='Histogram of steps per day after imputation',xlab='Total number of steps per day')
+```
 
-## Imputing missing values
-
-
+The mean and median total number of steps per day after imputation are
+```{r echo=FALSE}
+cat("mean =",mean(hd_imp$sum,na.rm=T))
+cat("\nmedian =",median(hd_imp$sum,na.rm=T))
+```
+Median and mean are higher than before imputation.
+Median and mean are equal, because missing values are concentrated in 8 dates, in which the #steps is entirely missing. Imputation causes all of these days to get the average number of steps per day of the other days, thereby leaving the mean unchanged. The median is equal to the value of one of these days.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r weekends}
+library(lubridate)
+library(lattice)
+data$daytype <- ifelse(wday(data$date) %in% c(1,7),"weekend","weekday")
+hd3 <- data %>% 
+  group_by(daytype,interval) %>%
+  summarise(mean = mean(steps,na.rm=T))
+comb <- xyplot(hd3$mean~hd3$interval|hd3$daytype, type="l",
+   main="Pattern of steps during the day",
+   ylab="#steps per interval", xlab="5-minute interval")
+update(comb, layout=c(1,2))
+```
