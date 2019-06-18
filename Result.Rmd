@@ -52,7 +52,7 @@ tim5min <- paste0(substr(maxint,1,nchar(maxint)-2),":",substring(maxint,nchar(ma
 Maximum average number of steps is `r maxsteps` at the `r row`-th 5-minute interval ending at `r tim5min`.
 
 
-## Imputing missing values
+## Imputing missing values  erewre   
 There are `r sum(is.na(data))` missing data values in the dataset
 ```{r impute}
 # if #steps is missing, impute average value of corresponding interval (from hd2)
